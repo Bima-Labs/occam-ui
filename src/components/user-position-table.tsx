@@ -119,7 +119,7 @@ export function UserPositionTable({ searchedAddress, isLoading: parentIsLoading,
       setPositions([]); // Clear previous positions immediately
 
       try {
-        const response = await fetch(`http://139.59.8.108:3010/service/record/${searchedAddress}`);
+        const response = await fetch(`https://209.38.125.60/service/record/${searchedAddress}`);
         
         if (!response.ok) {
           let errorMsg = `HTTP error! Status: ${response.status}`;
