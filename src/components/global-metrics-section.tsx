@@ -151,7 +151,7 @@ export function GlobalMetricsSection() {
 //    default number of skeletons.
 
 // 6. API Endpoint:
-//    The code uses the provided API endpoint `http://139.59.8.108:3010/service/stat`.
+//    The code uses the provided API endpoint `https://api-occam.bima.money/service/stat`.
 //    Ensure this endpoint is accessible from where your client-side code is running
 //    (CORS policies on the server might be a concern).
 
