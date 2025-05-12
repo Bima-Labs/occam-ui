@@ -61,7 +61,7 @@ export function GlobalMetricsSection() {
       setLoading(true);
       setError(null);
       try {
-        const response = await fetch('https://209.38.125.60/service/stat');
+        const response = await fetch('https://api-occam.bima.money/service/stat');
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -151,7 +151,7 @@ export function GlobalMetricsSection() {
 //    default number of skeletons.
 
 // 6. API Endpoint:
-//    The code uses the provided API endpoint `https://209.38.125.60/service/stat`.
+//    The code uses the provided API endpoint `https://api-occam.bima.money/service/stat`.
 //    Ensure this endpoint is accessible from where your client-side code is running
 //    (CORS policies on the server might be a concern).
 
