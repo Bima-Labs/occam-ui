@@ -4,7 +4,8 @@ import { Landmark, CircleDollarSign, Gauge, Users, ShieldCheck, AlertTriangle, X
 
 export const APP_NAME = "BIMA";
 
-export const ADDRESS_REGEX = /^0x[a-fA-F0-9]{40}$/;
+export const ADDRESS_REGEX = /^(1|3|bc1)/;
+
 
 export const MOCK_GLOBAL_METRICS: GlobalMetric[] = [
   {
@@ -90,17 +91,23 @@ export const MOCK_USER_POSITIONS: UserPosition[] = [
 ];
 
 export const STATUS_STYLES: Record<UserPositionStatus, StatusStyle> = {
-  Safe: { 
+  Safe: {
     textColor: 'text-success',
     icon: ShieldCheck,
+    bgColor: undefined,
+    borderColor: undefined
   },
   Warning: {
     textColor: 'text-warning',
     icon: AlertTriangle,
-   },
+    bgColor: undefined,
+    borderColor: undefined
+  },
   Liquidated: {
     textColor: 'text-destructive',
     icon: XCircle,
+    bgColor: undefined,
+    borderColor: undefined
   },
 };
 

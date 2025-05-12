@@ -26,6 +26,8 @@ export interface AddressLookupFormData {
 }
 
 export interface StatusStyle {
+  bgColor: any;
+  borderColor: any;
   textColor: string;
   icon: LucideIcon;
 }
