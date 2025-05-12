@@ -19,7 +19,7 @@ interface UserLookupSectionProps {
 }
 
 const AddressSchema = z.object({
-  address: z.string().regex(ADDRESS_REGEX, "Invalid blockchain address format (e.g., 0x...)."),
+  address: z.string().regex(ADDRESS_REGEX, "Invalid blockchain address format"),
 });
 
 export function UserLookupSection({ onAddressSubmit, isTableLoading }: UserLookupSectionProps) {
@@ -55,7 +55,7 @@ export function UserLookupSection({ onAddressSubmit, isTableLoading }: UserLooku
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                     <Input
                       id="address-input"
-                      placeholder="Enter your wallet address (e.g., 0x...)"
+                      placeholder="Enter your wallet address"
                       // Changed rounded-md to rounded-full
                       className="pl-10 shadow-sm rounded-full border-border focus:ring-primary"
                       {...field}

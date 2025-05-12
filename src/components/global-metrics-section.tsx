@@ -61,7 +61,7 @@ export function GlobalMetricsSection() {
       setLoading(true);
       setError(null);
       try {
-        const response = await fetch('http://139.59.8.108:3010/service/stat');
+        const response = await fetch('https://api-occam.bima.money/service/stat');
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
