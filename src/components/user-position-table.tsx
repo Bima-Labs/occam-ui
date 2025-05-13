@@ -43,12 +43,11 @@ interface ApiRecord {
   created_at: string;
 }
 
-// Define the structure of the API response
-interface ApiResponse {
-  status: boolean;
-  data: ApiRecord[];
-  message?: string; // Optional message field for errors
-}
+
+
+// The API response is directly an array of ApiRecord objects.
+// You can redefine your ApiResponse type like this:
+type ApiResponse = ApiRecord[];
 
 interface UserPositionTableProps {
   searchedAddress: string | null;
@@ -79,6 +78,7 @@ export function UserPositionTable({ searchedAddress, isLoading: parentIsLoading,
   const [statusFilter, setStatusFilter] = React.useState<UserPositionStatus | 'all'>('all');
   const { toast } = useToast();
 
+  // console.log('searched address : ' , searchedAddress)
   // Effect to handle reset when searchedAddress is cleared or initial validation
   React.useEffect(() => {
     if (!searchedAddress) {
@@ -106,11 +106,11 @@ export function UserPositionTable({ searchedAddress, isLoading: parentIsLoading,
   // Effect for fetching data when a valid searchedAddress is present
   React.useEffect(() => {
     // Only proceed if searchedAddress is present and valid
-    if (!searchedAddress || !ADDRESS_REGEX.test(searchedAddress)) {
-      // Reset/validation is handled by the effect above.
-      // If it became invalid after being valid, the above effect would clear things.
-      return;
-    }
+    // if (!searchedAddress || !ADDRESS_REGEX.test(searchedAddress)) {
+    //   // Reset/validation is handled by the effect above.
+    //   // If it became invalid after being valid, the above effect would clear things.
+    //   return;
+    // }
 
     const fetchPositions = async () => {
       setInternalIsLoading(true);
@@ -119,7 +119,7 @@ export function UserPositionTable({ searchedAddress, isLoading: parentIsLoading,
       setPositions([]); // Clear previous positions immediately
 
       try {
-        const response = await fetch(`https://api-occam.bima.money/service/record/${searchedAddress}`);
+        const response = await fetch(`https://api-occam.bima.money/service/get-mint-records`);
         
         if (!response.ok) {
           let errorMsg = `HTTP error! Status: ${response.status}`;
@@ -132,8 +132,9 @@ export function UserPositionTable({ searchedAddress, isLoading: parentIsLoading,
 
         const result: ApiResponse = await response.json();
 
-        if (result.status && result.data && result.data.length > 0) {
-          const transformedPositions: UserPosition[] = result.data.map(record => {
+        if (result &&  result.length > 0) {
+          const transformedPositions: UserPosition[] = result.map(record => {
+            
             const collateralRatio = parseFloat(record.collateral_ratio);
             return {
               id: record.id.toString(), 
@@ -148,11 +149,19 @@ export function UserPositionTable({ searchedAddress, isLoading: parentIsLoading,
               timestamp: record.created_at,
             };
           });
-          setPositions(transformedPositions);
-        } else if (result.status && (!result.data || result.data.length === 0)) {
+          // console.log('transformed position : ', transformedPositions)
+          if (searchedAddress != null) {
+                      const userPosition: UserPosition[] = transformedPositions.filter(position => position.address === searchedAddress);
+         
+          setPositions(userPosition);
+          } else {
+                  setPositions(transformedPositions);
+          }
+
+        } else if (result&&result.length === 0) {
           setError(`No position found for address: ${searchedAddress}.`);
         } else {
-          setError(result.message || "Failed to fetch data: API reported an issue.");
+          setError("Failed to fetch data: API reported an issue.");
         }
       } catch (err) {
         console.error("Failed to fetch user positions:", err);
@@ -277,14 +286,56 @@ export function UserPositionTable({ searchedAddress, isLoading: parentIsLoading,
                     }
 
                     // Case 2: No address searched yet (and parent/internal not loading for this specific component's primary task)
-                    if (!searchedAddress && !internalIsLoading && !parentIsLoading) { // Check parentIsLoading to ensure global loads are done
-                      return (
-                        <TableRow>
-                          <TableCell colSpan={6} className="text-center h-24 text-muted-foreground px-4 py-3">
-                            Please enter a user address to search for positions.
-                          </TableCell>
-                        </TableRow>
-                      );
+                    if ( searchedAddress==null) { // Check parentIsLoading to ensure global loads are done
+                      return filteredPositions.map((pos) => {
+                        const safeStatusStyles = { 
+                            icon: ShieldCheck, 
+                            textColor: 'text-green-600 dark:text-green-400', 
+                            bgColor: 'bg-green-500/10', 
+                            borderColor: 'border-green-500/30' 
+                        };
+                        const statusStyle = STATUS_STYLES && pos.status && STATUS_STYLES[pos.status] 
+                                            ? STATUS_STYLES[pos.status] 
+                                            : safeStatusStyles; 
+                        const StatusIcon = statusStyle.icon || AlertCircle; 
+
+                        return (
+                          <TableRow key={pos.id} className="hover:bg-muted/50 transition-colors">
+                            <TableCell className="font-medium px-4 py-3">
+                              <div className="flex items-center gap-2">
+                                <span className="font-mono text-sm" title={pos.address}>
+                                  {`${pos.address.substring(0, 6)}...${pos.address.substring(pos.address.length - 4)}`}
+                                </span>
+                                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => copyAddress(pos.address)}>
+                                  <Copy className="h-3.5 w-3.5" />
+                                  <span className="sr-only">Copy address</span>
+                                </Button>
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-right font-mono px-4 py-3">{pos.btcCollateral.toFixed(4)}</TableCell>
+                            <TableCell className="text-right font-mono px-4 py-3">{pos.usbdDebt.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
+                            <TableCell className={cn("text-right font-semibold px-4 py-3", getCRColorClass ? getCRColorClass(pos.collateralRatio) : statusStyle.textColor)}>
+                              {pos.collateralRatio.toFixed(2)}%
+                            </TableCell>
+                            <TableCell className="text-right font-mono px-4 py-3">{pos.liquidationThreshold.toFixed(2)}%</TableCell>
+                            <TableCell className="text-center px-4 py-3">
+                               <Badge 
+                                variant="outline" 
+                                className={cn(
+                                    "text-xs font-semibold px-2.5 py-1 rounded-full border",
+                                    statusStyle.textColor,
+                                    statusStyle.bgColor,
+                                    statusStyle.borderColor
+                                )}
+                                >
+                                <StatusIcon className={cn("mr-1.5 h-3.5 w-3.5", statusStyle.textColor)} />
+                                {pos.status}
+                              </Badge>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      });
+                     
                     }
                     
                     // Case 3: Actively fetching data for a searched address (internal loading is true)
