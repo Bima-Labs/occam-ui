@@ -10,7 +10,7 @@ export default function OptionsPage() {
 
   return (
     <div className="space-y-8">
-      <h1 className="text-3xl font-bold">User Options</h1>
+      <h1 className="text-3xl font-bold">Options</h1>
       <Separator />
       <UserOptionsTable
         searchedAddress={searchedAddress}
