@@ -36,88 +36,79 @@ export function UserOptionsTable({ searchedAddress, isLoading: parentIsLoading, 
   const [error, setError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
-    const fetchOptions = async () => {
-      setInternalIsLoading(true);
-      if (setParentIsLoading) setParentIsLoading(true);
-      setError(null);
-      setOptionsDataList([]);
+  let isMounted = true;
 
+  const fetchOptions = async () => {
+    setInternalIsLoading(true);
+    setParentIsLoading(true);
+    setError(null);
+    setOptionsDataList([]);
+
+    try {
       let apiUrl = '';
-      let isSingleAddressSearch = false;
+      const isValidAddress = searchedAddress && ADDRESS_REGEX.test(searchedAddress);
 
-      if (searchedAddress && ADDRESS_REGEX.test(searchedAddress)) {
-        apiUrl = `http://localhost:3010/service/get-user-options?userAddress=${searchedAddress}`;
-        isSingleAddressSearch = true;
-      } else if (searchedAddress === null || searchedAddress === '') {
-        // Fetch all (up to 10) when no specific address is searched
-        apiUrl = `http://localhost:3010/service/get-user-options`; // This endpoint should return all if no param
-        isSingleAddressSearch = false;
+      if (isValidAddress) {
+        apiUrl = `/api/user-options?userAddress=${searchedAddress}`;
+      } else if (!searchedAddress) {
+        apiUrl = `/api/user-options`;
       } else {
-        setError("Invalid address format provided for options data.");
-        setInternalIsLoading(false);
-        if (setParentIsLoading) setParentIsLoading(false);
-        return;
+        throw new Error("Invalid address format provided.");
       }
 
-      try {
-        const response = await fetch(apiUrl, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        });
+      const res = await fetch(apiUrl, { method: 'GET', headers: { 'Content-Type': 'application/json' } });
 
-        if (!response.ok) {
-          let errorMsg = `HTTP error! Status: ${response.status}`;
-          try {
-            const errorData = await response.json();
-            errorMsg = errorData.message || errorMsg;
-          } catch (parseError) { /* Ignore */ }
-          throw new Error(errorMsg);
-        }
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => null);
+        throw new Error(errorData?.message || `HTTP ${res.status} Error`);
+      }
 
-        const apiResponse: UserOptionsApiResponse = await response.json(); // Parse the full API response object
+      const apiResponse: UserOptionsApiResponse = await res.json();
 
-        // Check if the API response contains the 'data' array
-        if (apiResponse && Array.isArray(apiResponse.data) && apiResponse.data.length > 0) {
-          // Transform raw API data into our UserOptionsData interface
-          const transformedData: UserOptionsData[] = apiResponse.data.map((item: RawApiOptionRecord) => ({
-            userAddress: item.user_address,
-            putValue: parseFloat(item.put_value), // Convert string to number
-            callValue: parseFloat(item.call_value), // Convert string to number
-          }));
-
-          if (isSingleAddressSearch) {
-            // For single address search, we expect only one relevant result
-            // Find the one matching the searched address (API might return others if it's not strictly filtered)
-            const filteredSingleResult = transformedData.find(item => item.userAddress === searchedAddress);
-            if (filteredSingleResult) {
-              setOptionsDataList([filteredSingleResult]); // Set as array containing the single result
-            } else {
-              setError(`No options data found for address: ${searchedAddress}.`);
-            }
-          } else {
-            // For fetching all data, limit to the first 10
-            setOptionsDataList(transformedData.slice(0, 10));
-          }
-        } else {
-          // No data array or empty data array found in the response
-          const message = isSingleAddressSearch
+      if (!Array.isArray(apiResponse.data) || apiResponse.data.length === 0) {
+        throw new Error(
+          isValidAddress
             ? `No options data found for address: ${searchedAddress}.`
-            : "No options data found for default view.";
-          setError(message);
-        }
-      } catch (err) {
-        console.error("Failed to fetch user options:", err);
-        setError(err instanceof Error ? err.message : "An unknown error occurred while fetching options.");
-      } finally {
-        setInternalIsLoading(false);
-        if (setParentIsLoading) setParentIsLoading(false);
+            : "No options data found for default view."
+        );
       }
-    };
 
-    fetchOptions();
-  }, [searchedAddress, setParentIsLoading]);
+      const transformed = apiResponse.data.map((item: RawApiOptionRecord) => ({
+        userAddress: item.user_address,
+        putValue: parseFloat(item.put_value),
+        callValue: parseFloat(item.call_value),
+      }));
+
+      if (!isMounted) return;
+
+      if (isValidAddress) {
+        const exactMatch = transformed.find(opt => opt.userAddress.toLowerCase() === searchedAddress?.toLowerCase());
+        if (exactMatch) {
+          setOptionsDataList([exactMatch]);
+        } else {
+          setError(`No options data found for address: ${searchedAddress}.`);
+        }
+      } else {
+        setOptionsDataList(transformed.slice(0, 10));
+      }
+    } catch (err) {
+      if (!isMounted) return;
+      setError(err instanceof Error ? err.message : "Failed to fetch user options.");
+    } finally {
+      if (isMounted) {
+        setInternalIsLoading(false);
+        setParentIsLoading(false);
+      }
+    }
+  };
+
+  fetchOptions();
+
+  return () => {
+    isMounted = false;
+  };
+}, [searchedAddress, setParentIsLoading]);
+
 
   const combinedIsLoading = parentIsLoading || internalIsLoading;
 
