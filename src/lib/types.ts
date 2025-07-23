@@ -31,3 +31,10 @@ export interface StatusStyle {
   textColor: string;
   icon: LucideIcon;
 }
+
+// Add this new interface
+export interface UserOptionsData {
+  userAddress: string;
+  putValue: number;
+  callValue: number;
+}
