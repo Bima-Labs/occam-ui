@@ -1,63 +1,76 @@
 'use client';
 
-import { APP_NAME } from "@/lib/constants";
-import { ThemeToggleButton } from "@/components/theme-toggle-button";
-import Image from 'next/image';
+import * as React from 'react';
 import Link from 'next/link';
-import bima_logo from '../../public/Bima_logo.svg';
-<<<<<<< HEAD
+import Image from 'next/image';
+import { useAccount } from 'wagmi';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
-=======
-import Link from "next/link";
->>>>>>> fbbb07c98c8491620829ed986a18144fd7d47dc4
+import { ThemeToggleButton } from '@/components/theme-toggle-button';
+import { Button } from '@/components/ui/button';
+import { useUniSat } from '@/contexts/UniSatContext';
+import bima_logo from '../../public/Bima_logo.svg';
+import { Home, Settings } from 'lucide-react';
 
 export function Header() {
+  const { address: evmAddress, isConnected: isEvmConnected } = useAccount();
+  const { unisatAddress, connectUniSat, disconnectUniSat } = useUniSat();
+
+  const shorten = (addr: string) => addr.slice(0, 6) + '...' + addr.slice(-4);
+
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-<<<<<<< HEAD
       <div className="container flex h-14 max-w-screen-2xl items-center justify-between">
-        <div className="flex items-center space-x-4">
+        {/* Left Section: Logo + Nav */}
+        <div className="flex items-center gap-6">
           <Link href="/">
-            <Image
-              src={bima_logo}
-              alt="Bima Logo"
-              width={96}
-              height={96}
-              className="ml-4"
-            />
+            <Image src={bima_logo} alt="Bima Logo" width={96} height={96} className="ml-2" />
           </Link>
-          <nav className="flex items-center space-x-6">
-            <Link href="/" className="text-sm font-medium hover:underline">
-              Home
+
+          <div className="flex items-center gap-4">
+            <Link href="/" className="flex items-center gap-1 text-sm hover:text-primary transition">
+              <Home size={16} /> Home
             </Link>
-            <Link href="/options" className="text-sm font-medium hover:underline">
-              Options
+
+            <Link
+              href="/options"
+              className="flex items-center gap-1 text-sm hover:text-primary transition"
+            >
+              <Settings size={16} /> Options
             </Link>
-          </nav>
-=======
-      <div className="container flex h-14 max-w-screen-2xl items-center">
-        <div className="mr-4 flex items-center">
-          {/* Add the SVG here */}
-   <Link href="/">
-  <Image
-    src={bima_logo}
-    alt="Bima Logo"
-    width={96}
-    height={96}
-    className="mr-2 ml-7"
-  />
-</Link>
-          <Link
-            href="/options"
-            className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors mx-5"
-          >
-            Options
-          </Link>
->>>>>>> fbbb07c98c8491620829ed986a18144fd7d47dc4
+          </div>
         </div>
-        <div className="flex items-center space-x-2">
-          <ConnectButton />
+
+        {/* Right Section: Theme + Wallet */}
+        <div className="flex items-center gap-4">
           <ThemeToggleButton />
+
+          {/* RainbowKit Connect (EVM) */}
+          {!unisatAddress && (
+            <ConnectButton showBalance={false} chainStatus="icon" />
+          )}
+
+          {/* UniSat Connect */}
+          {!isEvmConnected && (
+            <>
+              {unisatAddress ? (
+                <div className="flex items-center gap-2 bg-orange-100 px-3 py-1 rounded-md text-sm font-mono">
+                  <span>{shorten(unisatAddress)}</span>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={disconnectUniSat}
+                    className="text-orange-500 hover:bg-orange-200"
+                  >
+                    Disconnect
+                  </Button>
+                </div>
+              ) : (
+                <Button onClick={connectUniSat} className="bg-orange-500 text-white">
+                  Connect UniSat
+                </Button>
+              )}
+            </>
+          )}
         </div>
       </div>
     </header>

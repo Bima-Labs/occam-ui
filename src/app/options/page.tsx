@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 import { UserOptionsTable } from '@/components/tables/UserOptionsTable';
+import { useUniSat } from '@/contexts/UniSatContext'; // ✅ use context
 
 interface UserOption {
   userAddress: string;
@@ -23,33 +24,30 @@ export default function OptionsPage() {
   const { address: evmAddress, isConnected: isEvmConnected } = useAccount();
   const { signMessageAsync } = useSignMessage();
   const { toast } = useToast();
+  const { unisatAddress } = useUniSat(); // ✅ get from context
+  React.useEffect(() => {
+  if (
+    !unisatAddress &&
+    !evmAddress &&
+    (userEntry !== null || callValue !== '' || putValue !== '')
+  ) {
+    setUserEntry(null);
+    setCallValue('');
+    setPutValue('');
+    window.location.reload();
+  }
+}, [unisatAddress, evmAddress]);
+
 
   const [userOptions, setUserOptions] = React.useState<UserOption[]>([]);
   const [userEntry, setUserEntry] = React.useState<UserOption | null>(null);
   const [callValue, setCallValue] = React.useState('');
   const [putValue, setPutValue] = React.useState('');
-  const [unisatAddress, setUnisatAddress] = React.useState<string | null>(null);
   const [isEditing, setIsEditing] = React.useState(false);
   const [isLoading, setIsLoading] = React.useState(false);
 
   const connectedAddress = evmAddress || unisatAddress;
   const isConnected = Boolean(connectedAddress);
-
-  React.useEffect(() => {
-    if (typeof window !== 'undefined' && (window as any).unisat) {
-      (window as any).unisat.getAccounts().then((accounts: string[]) => {
-        if (accounts?.[0]) setUnisatAddress(accounts[0]);
-      });
-
-      (window as any).unisat.on('accountsChanged', (accounts: string[]) => {
-        if (accounts?.[0]) {
-          setUnisatAddress(accounts[0]);
-        } else {
-          setUnisatAddress(null);
-        }
-      });
-    }
-  }, []);
 
   React.useEffect(() => {
     const fetchOptions = async () => {
@@ -86,38 +84,43 @@ export default function OptionsPage() {
   }, [connectedAddress]);
 
   const handleSubmit = async () => {
-    if (!connectedAddress) return;
+  if (!connectedAddress) return;
 
-    const payload: UserOptionPayload = {
-      userAddress: connectedAddress,
-      callValue: parseFloat(callValue),
-      putValue: parseFloat(putValue),
-    };
-
-    try {
-      if (isEvmConnected && userEntry) {
-        const message = `Authorize update of options:\nCall: ${callValue}, Put: ${putValue}`;
-        const signature = await signMessageAsync({ message });
-        payload.signature = signature;
-      }
-
-      const res = await fetch('/api/set-user-options', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-
-      if (res.status === 201) {
-        toast({ title: 'Saved successfully!' });
-        setIsEditing(false);
-        window.location.reload();
-      } else {
-        toast({ title: 'Failed to save.', variant: 'destructive' });
-      }
-    } catch {
-      toast({ title: 'Signature rejected', variant: 'destructive' });
-    }
+  const payload: UserOptionPayload = {
+    userAddress: connectedAddress,
+    callValue: parseFloat(callValue),
+    putValue: parseFloat(putValue),
   };
+
+  try {
+    const message = `Authorize update of options:\nCall: ${callValue}, Put: ${putValue}`;
+
+    if (isEvmConnected && userEntry) {
+      const signature = await signMessageAsync({ message });
+      payload.signature = signature;
+    } else if (unisatAddress && userEntry) {
+      const signature = await (window as any).unisat.signMessage(message); // ✅ string-based signing
+      payload.signature = signature;
+    }
+
+    const res = await fetch('/api/set-user-options', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+
+    if (res.status === 201) {
+      toast({ title: 'Saved successfully!' });
+      setIsEditing(false);
+      window.location.reload();
+    } else {
+      toast({ title: 'Failed to save.', variant: 'destructive' });
+    }
+  } catch (err) {
+    toast({ title: 'Signature rejected or failed', variant: 'destructive' });
+  }
+};
+
 
   return (
     <div className="space-y-8">
