@@ -1,274 +1,143 @@
-"use client";
+'use client';
 
 import * as React from 'react';
-import type { UserOptionsData } from '@/lib/types';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Card, CardHeader, CardContent, CardTitle } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
-import { AlertCircle } from 'lucide-react';
-import { ADDRESS_REGEX } from '@/lib/constants';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
+import { useToast } from '@/components/ui/use-toast';
+
+interface UserOption {
+  userAddress: string;
+  callValue: number;
+  putValue: number;
+}
 
 interface UserOptionsTableProps {
   searchedAddress: string | null;
   isLoading: boolean;
   setIsLoading: (loading: boolean) => void;
+  connectedAddress?: string | null;
 }
 
-interface RawApiOptionRecord {
-  user_address: string;
-  call_value: string;
-  put_value: string;
-  created_at: string;
-}
-
-interface UserOptionsApiResponse {
-  statusCode: number;
-  message: string;
-  data: RawApiOptionRecord[];
-}
-
-export function UserOptionsTable({ searchedAddress, isLoading: parentIsLoading, setIsLoading: setParentIsLoading }: UserOptionsTableProps) {
-  const [optionsDataList, setOptionsDataList] = React.useState<UserOptionsData[]>([]);
-  const [internalIsLoading, setInternalIsLoading] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
-
+export function UserOptionsTable({
+  searchedAddress,
+  isLoading: parentIsLoading,
+  setIsLoading: setParentIsLoading,
+  connectedAddress
+}: UserOptionsTableProps) {
+  const { toast } = useToast();
+  const [optionsDataList, setOptionsDataList] = React.useState<UserOption[]>([]);
   const [localSearch, setLocalSearch] = React.useState('');
+  const [showAdvanced, setShowAdvanced] = React.useState(false);
   const [minCallValue, setMinCallValue] = React.useState('');
   const [minPutValue, setMinPutValue] = React.useState('');
 
   React.useEffect(() => {
-    let isMounted = true;
-
-    const fetchOptions = async () => {
-      setInternalIsLoading(true);
+    const fetchData = async () => {
       setParentIsLoading(true);
-      setError(null);
-      setOptionsDataList([]);
-
       try {
-        let apiUrl = '';
-        const isValidAddress = searchedAddress && ADDRESS_REGEX.test(searchedAddress);
+        const res = await fetch('/api/get-user-options');
+        const json = await res.json();
+        const data = json.data;
 
-        if (isValidAddress) {
-          apiUrl = `/api/user-options?userAddress=${searchedAddress}`;
-        } else if (!searchedAddress) {
-          apiUrl = `/api/user-options`;
-        } else {
-          throw new Error("Invalid address format provided.");
+        if (Array.isArray(data)) {
+          const parsed = data.map((entry) => ({
+            userAddress: entry.user_address.toLowerCase(),
+            callValue: parseFloat(entry.call_value),
+            putValue: parseFloat(entry.put_value),
+          }));
+          setOptionsDataList(parsed);
         }
-
-        const res = await fetch(apiUrl, { method: 'GET', headers: { 'Content-Type': 'application/json' } });
-
-        if (!res.ok) {
-          const errorData = await res.json().catch(() => null);
-          throw new Error(errorData?.message || `HTTP ${res.status} Error`);
-        }
-
-        const apiResponse: UserOptionsApiResponse = await res.json();
-
-        if (!Array.isArray(apiResponse.data) || apiResponse.data.length === 0) {
-          throw new Error(
-            isValidAddress
-              ? `No options data found for address: ${searchedAddress}.`
-              : "No options data found for default view."
-          );
-        }
-
-        const transformed = apiResponse.data.map((item: RawApiOptionRecord) => ({
-          userAddress: item.user_address,
-          putValue: parseFloat(item.put_value),
-          callValue: parseFloat(item.call_value),
-        }));
-
-        if (!isMounted) return;
-
-        if (isValidAddress) {
-          const exactMatch = transformed.find(opt => opt.userAddress.toLowerCase() === searchedAddress?.toLowerCase());
-          if (exactMatch) {
-            setOptionsDataList([exactMatch]);
-          } else {
-            setError(`No options data found for address: ${searchedAddress}.`);
-          }
-        } else {
-          setOptionsDataList(transformed.slice(0, 10));
-        }
-      } catch (err) {
-        if (!isMounted) return;
-        setError(err instanceof Error ? err.message : "Failed to fetch user options.");
+      } catch (error) {
+        console.error('Fetch error:', error);
+        toast({ title: 'Failed to load user options', variant: 'destructive' });
       } finally {
-        if (isMounted) {
-          setInternalIsLoading(false);
-          setParentIsLoading(false);
-        }
+        setParentIsLoading(false);
       }
     };
 
-    fetchOptions();
+    fetchData();
+  }, []);
 
-    return () => {
-      isMounted = false;
-    };
-  }, [searchedAddress, setParentIsLoading]);
-
-  const combinedIsLoading = parentIsLoading || internalIsLoading;
-
-  const filteredOptions = optionsDataList.filter((data) => {
-    const matchAddress = data.userAddress.toLowerCase().includes(localSearch.toLowerCase());
-    const matchCall = minCallValue ? data.callValue >= parseFloat(minCallValue) : true;
-    const matchPut = minPutValue ? data.putValue >= parseFloat(minPutValue) : true;
-    return matchAddress && matchCall && matchPut;
-  });
-
-  if (combinedIsLoading && optionsDataList.length === 0) {
-    return <UserOptionsTableSkeleton />;
-  }
+  const filteredOptions = optionsDataList
+    .filter(
+      (entry) =>
+        !connectedAddress || entry.userAddress !== connectedAddress.toLowerCase()
+    )
+    .filter((entry) => {
+      const addressMatch = entry.userAddress.includes(localSearch.toLowerCase());
+      const callMatch = minCallValue ? entry.callValue >= parseFloat(minCallValue) : true;
+      const putMatch = minPutValue ? entry.putValue >= parseFloat(minPutValue) : true;
+      return addressMatch && callMatch && putMatch;
+    });
 
   return (
-    <section aria-labelledby="user-options-title" className="mt-8">
-      <h2 id="user-options-title" className="text-xl font-semibold mb-4">
-        {searchedAddress ? `Options for ${searchedAddress.substring(0, 6)}...` : "Recent User Options"}
-      </h2>
-
-      {error && !combinedIsLoading && (
-        <div
-          className="flex items-center p-4 mb-4 text-sm rounded-lg border bg-muted text-red-600 border-red-600 dark:text-red-400 dark:border-500"
-          role="alert"
+    <div className="space-y-4 mt-10">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+        <Input
+          placeholder="Search by address"
+          value={localSearch}
+          onChange={(e) => setLocalSearch(e.target.value)}
+          className="w-full sm:w-[300px]"
+        />
+        <Button
+          variant="outline"
+          onClick={() => setShowAdvanced(!showAdvanced)}
         >
-          <AlertCircle className="w-5 h-5 mr-3 flex-shrink-0" />
-          <span className="font-medium">{error}</span>
+          {showAdvanced ? 'Hide Advanced Search' : 'Advanced Search'}
+        </Button>
+      </div>
+
+      {showAdvanced && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+          <div>
+            <Label htmlFor="minCall">Min Call Value</Label>
+            <Input
+              id="minCall"
+              type="number"
+              value={minCallValue}
+              onChange={(e) => setMinCallValue(e.target.value)}
+            />
+          </div>
+          <div>
+            <Label htmlFor="minPut">Min Put Value</Label>
+            <Input
+              id="minPut"
+              type="number"
+              value={minPutValue}
+              onChange={(e) => setMinPutValue(e.target.value)}
+            />
+          </div>
         </div>
       )}
 
-      {!combinedIsLoading && optionsDataList.length > 0 && (
-        <>
-          <div className="mb-4 flex flex-wrap gap-4 items-center">
-            <input
-              type="text"
-              placeholder="Search by address..."
-              value={localSearch}
-              onChange={(e) => setLocalSearch(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-md text-sm w-64"
-            />
-            <input
-              type="number"
-              placeholder="Min Call Value"
-              value={minCallValue}
-              onChange={(e) => setMinCallValue(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-md text-sm w-40"
-            />
-            <input
-              type="number"
-              placeholder="Min Put Value"
-              value={minPutValue}
-              onChange={(e) => setMinPutValue(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-md text-sm w-40"
-            />
-          </div>
-
-          <Card className="shadow-lg transition-all duration-500 ease-in-out animate-fadeIn">
-            <CardHeader className="p-4 border-b">
-              <CardTitle className="text-lg font-semibold">User Options</CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="whitespace-nowrap px-4 py-3">User Address</TableHead>
-                      <TableHead className="text-right whitespace-nowrap px-4 py-3">Put Value</TableHead>
-                      <TableHead className="text-right whitespace-nowrap px-4 py-3">Call Value</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredOptions.map((data) => (
-                      <TableRow key={data.userAddress} className="hover:bg-muted/50 transition-colors">
-                        <TableCell className="font-medium px-4 py-3">
-                          <span className="font-mono text-sm" title={data.userAddress}>
-                            {`${data.userAddress.substring(0, 6)}...${data.userAddress.substring(data.userAddress.length - 4)}`}
-                          </span>
-                        </TableCell>
-                        <TableCell className="text-right font-mono px-4 py-3">
-                          {data.putValue.toLocaleString()}
-                        </TableCell>
-                        <TableCell className="text-right font-mono px-4 py-3">
-                          {data.callValue.toLocaleString()}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-
-                {filteredOptions.length === 0 && (
-                  <div className="text-center py-6 text-muted-foreground text-sm">
-                    No results matching current filters.
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </>
-      )}
-
-      {!combinedIsLoading && optionsDataList.length === 0 && !error && (
-        <Card className="shadow-lg animate-fadeIn">
-          <CardContent className="p-6 text-center text-muted-foreground">
-            {searchedAddress
-              ? `No options data found for address: ${searchedAddress.substring(0, 6)}...`
-              : "No options data available."
-            }
-          </CardContent>
-        </Card>
-      )}
-    </section>
-  );
-}
-
-function UserOptionsTableSkeleton() {
-  return (
-    <Card className="shadow-lg">
-      <CardHeader className="p-4 border-b">
-        <Skeleton className="h-6 w-48 rounded-md" />
-      </CardHeader>
-      <CardContent className="p-0">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              {Array.from({ length: 3 }).map((_, i) => (
-                <TableHead key={i} className="px-4 py-3"><Skeleton className="h-5 w-24" /></TableHead>
-              ))}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {Array.from({ length: 3 }).map((_, i) => (
-              <TableRow key={i}>
-                {Array.from({ length: 3 }).map((_, j) => (
-                  <TableCell key={j} className="px-4 py-3"><Skeleton className="h-5 w-full" /></TableCell>
-                ))}
-              </TableRow>
+      <div className="overflow-x-auto border rounded-lg mt-4">
+        <table className="min-w-full text-sm">
+          <thead className="bg-muted text-muted-foreground">
+            <tr>
+              <th className="text-left px-4 py-2">Address</th>
+              <th className="text-left px-4 py-2">Call Value</th>
+              <th className="text-left px-4 py-2">Put Value</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredOptions.map((entry) => (
+              <tr key={entry.userAddress} className="border-t">
+                <td className="px-4 py-2 font-mono">{entry.userAddress}</td>
+                <td className="px-4 py-2">{entry.callValue}</td>
+                <td className="px-4 py-2">{entry.putValue}</td>
+              </tr>
             ))}
-          </TableBody>
-        </Table>
-      </CardContent>
-    </Card>
+            {!parentIsLoading && filteredOptions.length === 0 && (
+              <tr>
+                <td colSpan={3} className="text-center py-4 text-muted-foreground">
+                  No results found.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
   );
-}
-
-const animationStyles = `
-  @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-  .animate-fadeIn {
-    animation: fadeIn 0.5s ease-out forwards;
-  }
-`;
-
-if (typeof window !== 'undefined') {
-  if (!document.getElementById('user-options-table-animation-styles')) {
-    const styleSheet = document.createElement("style");
-    styleSheet.id = "user-options-table-animation-styles";
-    styleSheet.type = "text/css";
-    styleSheet.innerText = animationStyles;
-    document.head.appendChild(styleSheet);
-  }
 }
