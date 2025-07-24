@@ -4,7 +4,8 @@ import { Landmark, CircleDollarSign, Gauge, Users, ShieldCheck, AlertTriangle, X
 
 export const APP_NAME = "BIMA";
 
-export const ADDRESS_REGEX = /^(1|3|bc1|0x[a-fA-F0-9]{40})$/;
+export const ADDRESS_REGEX = /^(?:0x[a-fA-F0-9]{40}|[13][a-km-zA-HJ-NP-Z1-9]{25,34}|bc1[0-9a-z]{25,59})$/;
+
 
 
 
