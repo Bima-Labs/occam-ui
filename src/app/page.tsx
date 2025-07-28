@@ -7,6 +7,7 @@ import { UserPositionTable } from '@/components/user-position-table';
 import { Separator } from '@/components/ui/separator';
 import { LoanApplicationModal } from '@/components/loan-application-modal';
 import { useAccount } from 'wagmi';
+import { LoanApplicationsTable } from '@/components/loan-application-table';
 
 // import { UserOptionsTable } from '@/components/tables/UserOptionsTable'; // <-- New Import
 export default function DeFiPulsePage() {
@@ -24,6 +25,11 @@ export default function DeFiPulsePage() {
       <Separator />
    <LoanApplicationModal connectedAddress={isConnected ? address : undefined} />
       {/* We are placing the "Apply for Loan" button next to the user lookup section */}
+            <Separator />
+
+      {/* Place the new LoanApplicationsTable here */}
+      <LoanApplicationsTable />
+
          <Separator />
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
       

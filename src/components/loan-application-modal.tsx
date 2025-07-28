@@ -95,7 +95,15 @@ setIsSubmitting(true);
       }
 
       toast.success('Application submitted successfully!', { id: toastId });
-      form.reset();
+    form.reset({
+  walletAddress: connectedAddress || "",
+  collateralAsset: undefined,
+  collateralAmount: 0,
+  loanAmount: 0,
+  loanCurrency: undefined,
+  walletType: undefined,
+});
+
       setIsOpen(false);
 
     } catch (error: any) {
@@ -129,7 +137,7 @@ setIsSubmitting(true);
                 <FormItem>
                   <FormLabel>Your Ethereum Wallet Address</FormLabel>
                   <FormControl>
-                    <Input placeholder="0x..." {...field} />
+                    <Input placeholder="0x..." {...field} readOnly/>
                   </FormControl>
                   <FormMessage />
                 </FormItem>

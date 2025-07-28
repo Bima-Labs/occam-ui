@@ -1,7 +1,7 @@
 // layout.tsx
 import './globals.css';
 import { Header } from '@/components/header';
-import { Toaster } from '@/components/ui/toaster';
+import { Toaster } from "react-hot-toast";
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { APP_NAME } from '@/lib/constants';
 import '@rainbow-me/rainbowkit/styles.css';
