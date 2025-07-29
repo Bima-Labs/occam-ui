@@ -34,8 +34,9 @@ export async function POST(req: NextRequest) {
     console.log(`Signature verified successfully for address: ${userAddress}`);
   }
   // --- End Signature Verification ---
-
-  const apiUrl = 'http://64.227.139.232:3010/service/add-user-option';
+ 
+  const base_url= process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3010';
+  const apiUrl = `${base_url}/service/add-user-option`;
 
   try {
     // Only send the necessary data to the external API, not signature details

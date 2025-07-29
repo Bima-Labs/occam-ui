@@ -7,8 +7,8 @@ export async function POST(request: Request) {
 
     // URL to your NestJS backend endpoint
     // IMPORTANT: Use an environment variable for this in production!
-    const backendUrl = process.env.BACKEND_API_URL || 'http://localhost:3010/loan/apply';
-
+    const base_url = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3010';
+  const backendUrl = `${base_url}/loan/apply`;
     const response = await fetch(backendUrl, {
       method: 'POST',
       headers: {

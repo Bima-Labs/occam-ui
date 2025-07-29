@@ -4,7 +4,8 @@ import { NextResponse } from 'next/server';
 
 export async function GET() {
   // Get the backend URL from environment variables
-    const backendUrl = process.env.BACKEND_API_URL || 'http://localhost:3010/loan/applications';
+  const base_url = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3010';
+  const backendUrl = `${base_url}/loan/applications`;
 console.log("Backend URL:", backendUrl);
   if (!backendUrl) {
     console.error("NESTJS_BACKEND_URL environment variable is not set.");
