@@ -374,7 +374,7 @@ export function UserPositionTable({
                       Position Status
                     </TableHead>
                     <TableHead className="text-center whitespace-nowrap px-4 py-3">
-                      Credit Score
+                      Bima Credit Score
               <><br /></>
                       (out of 100)
                     </TableHead>
