@@ -3,10 +3,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { verifyEvmSignature, verifyUniSatSignature } from '@/lib/signatureUtils'; // Adjust path if needed
 
 export async function POST(req: NextRequest) {
-  const { userAddress, callValue, putValue, signature, signedMessageContent } = await req.json();
+  const { userAddress, callValue, putValue, btcPrice, signature, signedMessageContent } = await req.json();
 
   // Basic validation
-  if (!userAddress || typeof callValue === 'undefined' || typeof putValue === 'undefined' || !signature || !signedMessageContent) {
+  if (!userAddress || typeof callValue === 'undefined' || typeof putValue === 'undefined'|| typeof btcPrice === 'undefined' || !signature || !signedMessageContent) {
     return NextResponse.json({ message: 'Missing required fields for update or signature verification.' }, { status: 400 });
   }
 
@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
     const res = await fetch(apiUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userAddress, callValue, putValue }), // Only send validated data
+      body: JSON.stringify({ userAddress, callValue, putValue , btcPrice }), // Only send validated data
     });
 
     const data = await res.json();

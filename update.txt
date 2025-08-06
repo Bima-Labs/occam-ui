@@ -1,0 +1,9 @@
+UI & Frontend Logic Updates
+New Price Chart Component: A new, self-contained <BtcPriceCard /> component was created to encapsulate all logic for the Bitcoin price.
+6-Month Historical Graph: This card fetches and displays the last 6 months of historical BTC price data on its initial load.
+Live Price Ticker: The card also shows the current BTC price, which updates every 10 seconds without affecting any other component on the page.
+Optimized Table: The UserOptionsTable was wrapped in React.memo to prevent it from re-rendering unnecessarily when other parts of the page state change.
+API & Performance Optimizations
+Eliminated API Call Loops: Fixed a critical performance bug that was causing repeated calls to /api/get-user-options and /api/get-whitelisted-users.
+Optimized Data Fetching: These APIs are now called only once when the page loads, and then only again if the user's connected wallet address changes.
+Stable Dependencies: The fix was achieved by using the useCallback hook to stabilize functions used inside useEffect dependency arrays, which broke the infinite re-render cycle.
