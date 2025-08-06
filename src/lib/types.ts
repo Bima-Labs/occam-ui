@@ -19,6 +19,7 @@ export interface UserPosition {
   collateralRatio: number; // As a percentage, e.g., 150 for 150%
   liquidationThreshold: number; // As a percentage
   status: UserPositionStatus;
+  score: number;
 }
 
 export interface AddressLookupFormData {
