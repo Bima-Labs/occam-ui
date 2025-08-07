@@ -145,15 +145,9 @@ export default function WhitelistPage() {
       connectedWallet: item.connected_wallet,
       assetType: item.asset_type,
       collateralWallet: item.collateral_wallet,
-      status:
-        item.status === "approved"
-          ? "Approved"
-          : item.status === "pending"
-          ? "Pending"
-          : item.status === "options_set"
-          ? "Options Set"
-          : "Rejected",
-    }));
+        status: formatStatus(item.status) 
+    }))
+      
   setRequests(formatted);
     } catch (err: any) {
         console.log('error : ', err)
@@ -162,7 +156,23 @@ export default function WhitelistPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+    };
+    // Utility to match the exact type
+function formatStatus(status: string): WhitelistRequest["status"] {
+  switch (status.toLowerCase()) {
+    case "pending":
+      return "Pending";
+    case "approved":
+      return "Approved";
+    case "options set":
+    case "options_set":
+      return "Options Set";
+    case "rejected":
+      return "Rejected";
+    default:
+      return "Pending"; // fallback or handle unknown values gracefully
+  }
+}
 
   // ------------------------
   // Refactor Agent & BugFixer Agent Note:
