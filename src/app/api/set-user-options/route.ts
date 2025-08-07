@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
   }
   // --- End Signature Verification ---
  
-  const base_url= process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3010';
+  const base_url= process.env.NEXT_PUBLIC_API_BASE_URL ||process.env.NEXT_PUBLIC_LOCAL_API_BASE_URL;
   const apiUrl = `${base_url}/service/add-user-option`;
 
   try {

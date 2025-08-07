@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const userAddress = searchParams.get('userAddress');
-  const base_url= process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3010';
+  const base_url= process.env.NEXT_PUBLIC_API_BASE_URL || process.env.NEXT_PUBLIC_LOCAL_API_BASE_URL;
   const backendUrl = `${base_url}/service/get-user-options`;
   const apiUrl = userAddress ? `${backendUrl}?userAddress=${userAddress}` : backendUrl;
 

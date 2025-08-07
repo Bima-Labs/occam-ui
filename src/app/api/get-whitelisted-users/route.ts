@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 export async function GET() {
     try {
       
-        const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3010';
+        const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ||process.env.NEXT_PUBLIC_LOCAL_API_BASE_URL;
     // Call the existing API endpoint
     const response = await fetch(`${baseUrl}/service/get-whitelisted-address`, {
       method: 'GET',

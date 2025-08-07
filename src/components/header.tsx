@@ -37,6 +37,12 @@ export function Header() {
             >
               <Settings size={16} /> Options
             </Link>
+            <Link
+              href="/whitelist"
+              className="flex items-center gap-1 text-sm hover:text-primary transition"
+            >
+              <Settings size={16} /> Whitelist Request
+            </Link>
           </div>
         </div>
 

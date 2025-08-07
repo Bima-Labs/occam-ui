@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server';
 
 export async function GET() {
   // Get the backend URL from environment variables
-  const base_url = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3010';
+  const base_url = process.env.NEXT_PUBLIC_API_BASE_URL || process.env.NEXT_PUBLIC_LOCAL_API_BASE_URL;
   const backendUrl = `${base_url}/loan/applications`;
 console.log("Backend URL:", backendUrl);
   if (!backendUrl) {

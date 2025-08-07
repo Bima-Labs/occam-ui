@@ -54,6 +54,13 @@ const formSchema = z.object({
   walletType: z.enum(["Multisig", "Native", "Contract"], {
     required_error: "You need to select a wallet type."
   })
+  ,
+   collateralAddress:z.string().regex(
+  /^(bc1|tb1|ltc1|tltc1)[a-z0-9]{11,71}$|^(bitcoincash:|bchtest:)?[a-zA-Z0-9]{25,50}$/,
+  {
+    message: "Please enter a valid BTC, BCH, LTC, or DOGE address.",
+  }
+)
 });
 
 export function LoanApplicationModal({ connectedAddress }: LoanApplicationModalProps) {
@@ -62,10 +69,16 @@ export function LoanApplicationModal({ connectedAddress }: LoanApplicationModalP
   // 1. Define your form.
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
+    mode: "onChange", // <--- This enables live validation
     defaultValues: {
       walletAddress: "",
       collateralAmount: 0,
       loanAmount: 0,
+      loanCurrency: undefined,
+      walletType: undefined,
+      collateralAsset: undefined,
+      collateralAddress:""
+   
     },
   });
 
@@ -101,7 +114,8 @@ setIsSubmitting(true);
   collateralAmount: 0,
   loanAmount: 0,
   loanCurrency: undefined,
-  walletType: undefined,
+      walletType: undefined,
+  collateralAddress:undefined
 });
 
       setIsOpen(false);
@@ -236,7 +250,20 @@ setIsSubmitting(true);
                         <FormMessage />
                     </FormItem>
                 )}
-                />
+            />
+             <FormField
+              control={form.control}
+              name="collateralAddress"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Your Collateral Wallet Address</FormLabel>
+                  <FormControl>
+                    <Input placeholder="enter valid address" {...field}/>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+                      />
 
             <DialogFooter>
         <Button type="submit" disabled={isSubmitting || !form.formState.isValid}>
