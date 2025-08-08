@@ -337,7 +337,7 @@ function formatStatus(status: string): WhitelistRequest["status"] {
                     <TableHead>Asset Type</TableHead>
                     <TableHead>Collateral Wallet</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                    {/* <TableHead className="text-right">Actions</TableHead> */}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -366,6 +366,7 @@ function formatStatus(status: string): WhitelistRequest["status"] {
                           {request.status}
                         </span>
                       </TableCell>
+{/*                       
                       <TableCell className="text-right">
                         {request.status === "Approved" && (
                           <Button
@@ -381,7 +382,8 @@ function formatStatus(status: string): WhitelistRequest["status"] {
                             Options Set
                           </Button>
                         )}
-                      </TableCell>
+                      </TableCell> */}
+
                     </TableRow>
                   ))}
                 </TableBody>
