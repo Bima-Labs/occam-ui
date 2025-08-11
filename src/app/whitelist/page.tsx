@@ -146,6 +146,7 @@ export default function WhitelistPage() {
     try {
       const url = `/api/whitelist/get-whitelist-requests?address=${currentUserAddress}`;
       const response = await fetch(url);
+     
       if (!response.ok) {
         // Handle no content or non-JSON for get-whitelist-requests similarly
         const contentType = response.headers.get('content-type');
@@ -160,12 +161,13 @@ export default function WhitelistPage() {
         throw new Error("Failed to fetch whitelist requests.");
       }
       const data = await response.json();
+       console.log(' whitelist response : ', data);
       const normalized = Array.isArray(data) ? data : [data];
 
       const formatted = normalized.map((item: any) => ({ // Ensure 'any' for unknown backend fields
         id: item.id,
         connectedWallet: item.connected_wallet || item.wallet_address, // Use either if backend differs
-        collateralAsset: item.collateral_asset,
+        collateralAsset: item.asset_type,
         collateralAmount: item.collateral_amount,
         loanAmount: item.loan_amount,
         loanCurrency: item.loan_currency,
@@ -250,9 +252,6 @@ function formatStatus(status: string | null | undefined): WhitelistRequest["stat
     }
   };
 
-  const handleSetOptions = (requestId: number) => {
-    router.push(`/options/${requestId}`);
-  };
 
   return (
     <div className="flex flex-col items-center p-4 md:p-8 min-h-screen bg-gray-50">
@@ -296,11 +295,11 @@ function formatStatus(status: string | null | undefined): WhitelistRequest["stat
                       </FormControl>
                       <SelectContent>
                         <SelectItem value="Bitcoin">Bitcoin (BTC)</SelectItem>
-                        <SelectItem value="Dogecoin">Dogecoin (DOGE)</SelectItem>
+                        {/* <SelectItem value="Dogecoin">Dogecoin (DOGE)</SelectItem>
                         <SelectItem value="Litecoin">Litecoin (LTC)</SelectItem>
                         <SelectItem value="Ethereum">Ethereum (ETH)</SelectItem>
                         <SelectItem value="USDC">USD Coin (USDC)</SelectItem>
-                        <SelectItem value="Solana">Solana (SOL)</SelectItem>
+                        <SelectItem value="Solana">Solana (SOL)</SelectItem> */}
                       </SelectContent>
                     </Select>
                     <FormMessage />

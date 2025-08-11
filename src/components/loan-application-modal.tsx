@@ -191,8 +191,8 @@ export function LoanApplicationModal({ connectedAddress, onLoanSubmitted }: Loan
                     </FormControl>
                     <SelectContent>
                       <SelectItem value="Bitcoin">Bitcoin (BTC)</SelectItem>
-                      <SelectItem value="Dogecoin">Dogecoin (DOGE)</SelectItem>
-                      <SelectItem value="Litecoin">Litecoin (LTC)</SelectItem>
+                      {/* <SelectItem value="Dogecoin">Dogecoin (DOGE)</SelectItem>
+                      <SelectItem value="Litecoin">Litecoin (LTC)</SelectItem> */}
                     </SelectContent>
                   </Select>
                   <FormMessage />
