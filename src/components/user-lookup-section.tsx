@@ -17,7 +17,7 @@ interface UserLookupSectionProps {
   onAddressSubmit: (address: string) => void;
   isTableLoading: boolean;
 }
-
+//bc1q8q5ngue8697flt8yc52xrfppecf47jghhlvq8v96ukeaqz694y7q2tzca9
 const AddressSchema = z.object({
   address: z.string().regex(ADDRESS_REGEX, "Invalid blockchain address format"),
 });
