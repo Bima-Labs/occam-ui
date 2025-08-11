@@ -9,7 +9,7 @@ import { ThemeToggleButton } from '@/components/theme-toggle-button';
 import { Button } from '@/components/ui/button';
 import { useUniSat } from '@/contexts/UniSatContext';
 import bima_logo from '../../public/Bima_logo.svg';
-import { Home, Settings } from 'lucide-react';
+import { Home, Settings, Wallet } from 'lucide-react'; // Added Wallet icon for Loan link
 
 export function Header() {
   const { address: evmAddress, isConnected: isEvmConnected } = useAccount();
@@ -42,6 +42,13 @@ export function Header() {
               className="flex items-center gap-1 text-sm hover:text-primary transition"
             >
               <Settings size={16} /> Whitelist Request
+            </Link>
+            {/* NEW LOAN LINK */}
+            <Link
+              href="/loan"
+              className="flex items-center gap-1 text-sm hover:text-primary transition"
+            >
+              <Wallet size={16} /> Loan Application
             </Link>
           </div>
         </div>

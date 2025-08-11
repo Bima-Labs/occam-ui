@@ -1,4 +1,3 @@
-// src/components/loan-application-modal.tsx
 "use client";
 
 import * as React from 'react';
@@ -33,9 +32,16 @@ import {
 } from "@/components/ui/select"
 import { Input } from '@/components/ui/input';
 
+// Utility functions for address validation
+const isEthereumAddress = (address: string) => /^0x[a-fA-F0-9]{40}$/.test(address);
+const isBitcoinAddress = (address: string) => /^(bc1|[13])[a-zA-HJ-NP-Z0-9]{25,39}$/.test(address);
+const isDogecoinAddress = (address: string) => /^D[5-9A-HJ-NP-Z][a-km-zA-HJ-NP-Z1-9]{32}$|^A[5-9A-HJ-NP-Z][a-km-zA-HJ-NP-Z1-9]{32}$|^9[5-9A-HJ-NP-Z][a-km-zA-HJ-NP-Z1-9]{32}$/.test(address);
+const isLitecoinAddress = (address: string) => /^[LM3][a-km-zA-HJ-NP-Z1-9]{26,33}$|^ltc1[a-z0-9]{26,70}$/.test(address);
+
 // Define a type for the component's props
 interface LoanApplicationModalProps {
   connectedAddress?: `0x${string}`; // <-- New Prop Type
+  onLoanSubmitted?: () => void; // Callback to re-fetch loans after submission
 }
 
 // Define the validation schema using Zod
@@ -43,7 +49,7 @@ const formSchema = z.object({
   walletAddress: z.string().regex(/^0x[a-fA-F0-9]{40}$/, {
     message: "Please enter a valid Ethereum address.",
   }),
-     collateralAsset: z.enum(["Dogecoin", "Litecoin", "Bitcoin"], { // <-- ADDED
+  collateralAsset: z.enum(["Dogecoin", "Litecoin", "Bitcoin"], {
     required_error: "You need to select a collateral asset."
   }),
   collateralAmount: z.coerce.number().positive({ message: "Amount must be positive." }),
@@ -53,23 +59,32 @@ const formSchema = z.object({
   }),
   walletType: z.enum(["Multisig", "Native", "Contract"], {
     required_error: "You need to select a wallet type."
-  })
-  ,
-   collateralAddress:z.string().regex(
-  /^(bc1|tb1|ltc1|tltc1)[a-z0-9]{11,71}$|^(bitcoincash:|bchtest:)?[a-zA-Z0-9]{25,50}$/,
-  {
-    message: "Please enter a valid BTC, BCH, LTC, or DOGE address.",
+  }),
+  collateralAddress: z.string().min(1, "Collateral wallet address is required."),
+}).refine((data) => {
+  if (!data.collateralAsset || !data.collateralAddress) return true; // Don't validate if not selected or empty
+  switch (data.collateralAsset) {
+    case "Bitcoin":
+      return isBitcoinAddress(data.collateralAddress);
+    case "Dogecoin":
+      return isDogecoinAddress(data.collateralAddress);
+    case "Litecoin":
+      return isLitecoinAddress(data.collateralAddress);
+    default:
+      return false; // Should not happen with enum, but for safety
   }
-)
+}, {
+  message: "Enter a valid address for the selected collateral asset.",
+  path: ["collateralAddress"],
 });
 
-export function LoanApplicationModal({ connectedAddress }: LoanApplicationModalProps) {
+export function LoanApplicationModal({ connectedAddress, onLoanSubmitted }: LoanApplicationModalProps) {
   const [isOpen, setIsOpen] = React.useState(false);
- const [isSubmitting, setIsSubmitting] = React.useState(false);
-  // 1. Define your form.
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
-    mode: "onChange", // <--- This enables live validation
+    mode: "onChange",
     defaultValues: {
       walletAddress: "",
       collateralAmount: 0,
@@ -77,27 +92,30 @@ export function LoanApplicationModal({ connectedAddress }: LoanApplicationModalP
       loanCurrency: undefined,
       walletType: undefined,
       collateralAsset: undefined,
-      collateralAddress:""
-   
+      collateralAddress: ""
     },
   });
 
-      React.useEffect(() => {
+  React.useEffect(() => {
     if (connectedAddress) {
       form.setValue('walletAddress', connectedAddress, { shouldValidate: true });
     } else {
-        // Clear the field if the user disconnects while the form is open
-        form.setValue('walletAddress', '', { shouldValidate: true });
+      form.setValue('walletAddress', '', { shouldValidate: true });
     }
-      }, [connectedAddress, form]);
-    
-  // 2. Define a submit handler.
+  }, [connectedAddress, form]);
+
+  // Re-validate collateral address when collateral asset changes
+  const handleCollateralAssetChange = (value: string) => {
+    form.setValue('collateralAsset', value as any, { shouldValidate: true });
+    form.trigger('collateralAddress'); // Trigger validation for collateralAddress
+  };
+
   async function onSubmit(values: z.infer<typeof formSchema>) {
-setIsSubmitting(true);
+    setIsSubmitting(true);
     const toastId = toast.loading('Submitting application...');
 
     try {
-      const response = await fetch('/api/loan', {
+      const response = await fetch('/api/loan', { // Assuming /api/loan is the endpoint
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(values),
@@ -108,17 +126,18 @@ setIsSubmitting(true);
       }
 
       toast.success('Application submitted successfully!', { id: toastId });
-    form.reset({
-  walletAddress: connectedAddress || "",
-  collateralAsset: undefined,
-  collateralAmount: 0,
-  loanAmount: 0,
-  loanCurrency: undefined,
-      walletType: undefined,
-  collateralAddress:undefined
-});
+      form.reset({
+        walletAddress: connectedAddress || "",
+        collateralAsset: undefined,
+        collateralAmount: 0,
+        loanAmount: 0,
+        loanCurrency: undefined,
+        walletType: undefined,
+        collateralAddress: ""
+      });
 
       setIsOpen(false);
+      onLoanSubmitted?.(); // Call the callback after successful submission
 
     } catch (error: any) {
       toast.error(error.message || 'An unexpected error occurred.', { id: toastId });
@@ -131,11 +150,11 @@ setIsSubmitting(true);
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-     <Button variant="outline" disabled={!connectedAddress}>
-            Apply for Loan
-          </Button>
+        <Button variant="default" disabled={!connectedAddress}>
+          Apply for Loan
+        </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[425px] md:max-w-2xl"> {/* Increased width */}
         <DialogHeader>
           <DialogTitle>Loan Application</DialogTitle>
           <DialogDescription>
@@ -143,28 +162,28 @@ setIsSubmitting(true);
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4"> {/* Grid layout for better aesthetics */}
             <FormField
               control={form.control}
               name="walletAddress"
               render={({ field }) => (
-                <FormItem>
+                <FormItem className="md:col-span-2"> {/* Full width */}
                   <FormLabel>Your Ethereum Wallet Address</FormLabel>
                   <FormControl>
-                    <Input placeholder="0x..." {...field} readOnly/>
+                    <Input placeholder="0x..." {...field} readOnly />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
-                      />
-                       {/* ADD THIS NEW FORM FIELD for Collateral Asset */}
+            />
+
             <FormField
               control={form.control}
               name="collateralAsset"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Collateral Asset</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select onValueChange={handleCollateralAssetChange} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Select an asset to lock" />
@@ -180,7 +199,7 @@ setIsSubmitting(true);
                 </FormItem>
               )}
             />
-             <FormField
+            <FormField
               control={form.control}
               name="collateralAmount"
               render={({ field }) => (
@@ -193,82 +212,81 @@ setIsSubmitting(true);
                 </FormItem>
               )}
             />
-            <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="loanAmount"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Loan Amount</FormLabel>
-                      <FormControl>
-                        <Input type="number" placeholder="e.g., 5000" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                 <FormField
-                    control={form.control}
-                    name="loanCurrency"
-                    render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Currency</FormLabel>
-                             <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                <FormControl>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Select" />
-                                </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                    <SelectItem value="USDC">USDC</SelectItem>
-                                    <SelectItem value="USDT">USDT</SelectItem>
-                                </SelectContent>
-                            </Select>
-                            <FormMessage />
-                        </FormItem>
-                    )}
-                    />
-            </div>
-             <FormField
-                control={form.control}
-                name="walletType"
-                render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Wallet Type</FormLabel>
-                         <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl>
-                            <SelectTrigger>
-                                <SelectValue placeholder="Select your wallet type" />
-                            </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                                <SelectItem value="Native">Native Wallet</SelectItem>
-                                <SelectItem value="Multisig">Multisig</SelectItem>
-                                <SelectItem value="Contract">Smart Contract Wallet</SelectItem>
-                            </SelectContent>
-                        </Select>
-                        <FormMessage />
-                    </FormItem>
-                )}
+
+            <FormField
+              control={form.control}
+              name="loanAmount"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Loan Amount</FormLabel>
+                  <FormControl>
+                    <Input type="number" placeholder="e.g., 5000" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
-             <FormField
+            <FormField
+              control={form.control}
+              name="loanCurrency"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Currency</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="USDC">USDC</SelectItem>
+                      <SelectItem value="USDT">USDT</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="walletType"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Wallet Type</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select your wallet type" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="Native">Native Wallet</SelectItem>
+                      <SelectItem value="Multisig">Multisig</SelectItem>
+                      <SelectItem value="Contract">Smart Contract Wallet</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
               control={form.control}
               name="collateralAddress"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Your Collateral Wallet Address</FormLabel>
                   <FormControl>
-                    <Input placeholder="enter valid address" {...field}/>
+                    <Input placeholder="Enter valid address" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
-                      />
-
-            <DialogFooter>
-        <Button type="submit" disabled={isSubmitting || !form.formState.isValid}>
-                  {isSubmitting ? 'Submitting...' : 'Submit Application'}
-                </Button>
+            />
+            <DialogFooter className="md:col-span-2 mt-4"> {/* Full width footer */}
+              <Button type="submit" disabled={isSubmitting || !form.formState.isValid}>
+                {isSubmitting ? 'Submitting...' : 'Submit Application'}
+              </Button>
             </DialogFooter>
           </form>
         </Form>

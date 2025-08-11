@@ -22,15 +22,7 @@ export default function DeFiPulsePage() {
   return (
     <div className="space-y-12">
       <GlobalMetricsSection />
-      <Separator />
-   <LoanApplicationModal connectedAddress={isConnected ? address : undefined} />
-      {/* We are placing the "Apply for Loan" button next to the user lookup section */}
-            <Separator />
 
-      {/* Place the new LoanApplicationsTable here */}
-      <LoanApplicationsTable />
-
-         <Separator />
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
       
      

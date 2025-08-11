@@ -1,332 +1,3 @@
-
-// 'use client';
-
-// import * as React from 'react';
-// import { useAccount, useSignMessage } from 'wagmi';
-// import { Separator } from '@/components/ui/separator';
-// import { Input } from '@/components/ui/input';
-// import { Label } from '@/components/ui/label';
-// import { Button } from '@/components/ui/button';
-// import { useToast } from '@/components/ui/use-toast';
-// import { UserOptionsTable } from '@/components/tables/UserOptionsTable';
-// import { useUniSat } from '@/contexts/UniSatContext';
-
-// // Import Dialog components
-// import {
-//   Dialog,
-//   DialogContent,
-//   DialogHeader,
-//   DialogTitle,
-//   DialogFooter,
-// } from '@/components/ui/dialog';
-
-// interface UserOption {
-//   userAddress: string;
-//   callValue: number;
-//   putValue: number;
-// }
-
-// // UPDATE: Added signedMessageContent to the payload interface
-// interface UserOptionPayload extends UserOption {
-//   signature?: string;
-//   signedMessageContent?: string;
-// }
-
-// export default function OptionsPage() {
-//   const { address: evmAddress, isConnected: isEvmConnected } = useAccount();
-//   const { signMessageAsync } = useSignMessage();
-//   const { toast } = useToast();
-//   const { unisatAddress } = useUniSat();
-
-//   const [allUserOptions, setAllUserOptions] = React.useState<UserOption[]>([]);
-//   const [userEntry, setUserEntry] = React.useState<UserOption | null>(null);
-//   const [isWhitelisted, setIsWhitelisted] = React.useState(false);
-//   const [callValue, setCallValue] = React.useState('');
-//   const [putValue, setPutValue] = React.useState('');
-//   const [isModalOpen, setIsModalOpen] = React.useState(false);
-//   const [isLoading, setIsLoading] = React.useState(false);
-
-//   const connectedAddress = evmAddress || unisatAddress;
-//   const isConnected = Boolean(connectedAddress);
-
-//   // Effect to fetch ALL user options once on mount
-//   React.useEffect(() => {
-//     const fetchAllOptions = async () => {
-//       setIsLoading(true);
-//       try {
-//         const res = await fetch('/api/get-user-options');
-//         const json = await res.json();
-//         const raw = json.data;
-
-//         if (Array.isArray(raw)) {
-//           const parsedData = raw.map((entry: any) => ({
-//             userAddress: entry.user_address.toLowerCase(),
-//             callValue: parseFloat(entry.call_value),
-//             putValue: parseFloat(entry.put_value),
-//           }));
-//           setAllUserOptions(parsedData);
-//         }
-//       } catch (err) {
-//         console.error('Failed to load all options:', err);
-//         toast({ title: 'Failed to load options', variant: 'destructive' });
-//       } finally {
-//         setIsLoading(false);
-//       }
-//     };
-
-//     fetchAllOptions();
-//   }, []);
-
-
-//   //write function to check is user whitelisted , return true or false
-// const checkWhitelisted = async () => {
-//   try {
-//     const res = await fetch('/api/get-whitelisted-users');
-//     const json = await res.json();
-//     console.log('Whitelisted users response:', json);
-
-//     const raw = json.data || []; // ✅ fallback to empty array
-//     console.log('Raw whitelisted data:', raw);
-
-//     // Extract lowercase addresses
-//     const allWhitelistedUsers: string[] = raw
-//       .map((entry: any) => entry.user_address?.toLowerCase())
-//       .filter(Boolean); // remove null/undefined
-
-//     console.log('All Whitelisted Users:', allWhitelistedUsers);
-
-//     if (
-//       connectedAddress &&
-//       allWhitelistedUsers.includes(connectedAddress.toLowerCase())
-//     ) {
-//       setIsWhitelisted(true);
-//     } else {
-//       console.log('You are not whitelisted');
-//       setIsWhitelisted(false);
-//     }
-//   } catch (error) {
-//     console.error('Error fetching whitelisted users:', error);
-//     setIsWhitelisted(false);
-//   }
-// };
-
-
-
-//   // Effect to find/update the current user's entry from allUserOptions
-//   React.useEffect(() => {
-//     if (connectedAddress && allUserOptions.length > 0) {
-//       const lower = connectedAddress.toLowerCase();
-//       const match = allUserOptions.find((entry) => entry.userAddress === lower);
-//       checkWhitelisted();
-//       setUserEntry(match || null);
-//       if (match) {
-//         setCallValue(match.callValue.toString());
-//         setPutValue(match.putValue.toString());
-//       } else {
-//         setCallValue('');
-//         setPutValue('');
-//       }
-//     } else if (!connectedAddress) {
-//       setUserEntry(null);
-//       setCallValue('');
-//       setPutValue('');
-//       setIsModalOpen(false);
-//     }
-//   }, [connectedAddress, allUserOptions]);
-
-//   // Effect to clear input if wallets disconnect
-//   React.useEffect(() => {
-//     if (!unisatAddress && !evmAddress) {
-//       if (userEntry !== null || callValue !== '' || putValue !== '') {
-//         setUserEntry(null);
-//         setCallValue('');
-//         setPutValue('');
-//         setIsModalOpen(false);
-//         toast({ title: 'Wallet disconnected', description: 'Your option inputs have been cleared.', variant: 'warning' });
-//       }
-//     }
-//   }, [unisatAddress, evmAddress, userEntry, callValue, putValue, toast]);
-
-//   // UPDATE: The handleSubmit function is updated to send the required payload
-//   const handleSubmit = async () => {
-//     if (!connectedAddress) return;
-//     setIsLoading(true);
-
-//     // 1. Define the exact message to be signed.
-//     const messageToSign = `Authorize update of options:\nCall: ${callValue}, Put: ${putValue}`;
-
-//     // 2. Prepare the payload with the message content included.
-//     const payload: UserOptionPayload = {
-//       userAddress: connectedAddress,
-//       callValue: parseFloat(callValue) || 0,
-//       putValue: parseFloat(putValue) || 0,
-//       signedMessageContent: messageToSign,
-//     };
-
-//     try {
-//       // 3. Request signature from the user's wallet.
-//       let signature;
-//       if (isEvmConnected) {
-//         signature = await signMessageAsync({ message: messageToSign });
-//       } else if (unisatAddress && (window as any).unisat) {
-//         signature = await (window as any).unisat.signMessage(messageToSign);
-//       } else {
-//         toast({ title: 'No connected wallet for signing', variant: 'destructive' });
-//         setIsLoading(false);
-//         return;
-//       }
-//       payload.signature = signature;
-
-//       // 4. Send the complete payload to the backend API.
-//       const res = await fetch('/api/set-user-options', {
-//         method: 'POST',
-//         headers: { 'Content-Type': 'application/json' },
-//         body: JSON.stringify(payload),
-//       });
-
-//       if (res.ok) {
-//         toast({ title: 'Saved successfully!', description: 'Your options have been updated.' });
-//         setIsModalOpen(false);
-
-//         // Optimistically update UI
-//         setAllUserOptions((prevOptions) => {
-//           const newEntry = {
-//             userAddress: connectedAddress.toLowerCase(),
-//             callValue: payload.callValue,
-//             putValue: payload.putValue,
-//           };
-//           const existingIndex = prevOptions.findIndex(
-//             (opt) => opt.userAddress === connectedAddress.toLowerCase()
-//           );
-//           if (existingIndex !== -1) {
-//             const updatedOptions = [...prevOptions];
-//             updatedOptions[existingIndex] = newEntry;
-//             return updatedOptions;
-//           } else {
-//             return [...prevOptions, newEntry];
-//           }
-//         });
-//       } else {
-//         const errorData = await res.json();
-//         toast({
-//           title: 'Failed to save.',
-//           description: errorData.message || 'An unknown error occurred.',
-//           variant: 'destructive',
-//         });
-//       }
-//     } catch (err) {
-//       console.error('Submit error:', err);
-//       toast({ title: 'Signature rejected or failed', description: 'Please try again and approve the signature.', variant: 'destructive' });
-//     } finally {
-//       setIsLoading(false);
-//     }
-//   };
-
-//   const openModalForEdit = () => {
-//     if (userEntry) {
-//       setCallValue(userEntry.callValue.toString());
-//       setPutValue(userEntry.putValue.toString());
-//     } else {
-//       setCallValue('');
-//       setPutValue('');
-//     }
-//     setIsModalOpen(true);
-//   };
-
-//   return (
-//     <div className="space-y-8">
-//       <h1 className="text-3xl font-bold">Options</h1>
-//       <Separator />
-
-//       {isLoading && allUserOptions.length === 0 ? (
-//         <div className="text-center py-10">
-//           <p>Loading your options data...</p>
-//         </div>
-//       ) : (
-//         <>
-//           {userEntry && isWhitelisted  ? (
-//             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-//               <div className="rounded-lg border p-4 shadow-sm bg-muted">
-//                 <h2 className="text-sm font-medium text-muted-foreground">Your Call Value</h2>
-//                 <p className="text-2xl font-bold">{userEntry.callValue}</p>
-//               </div>
-//               <div className="rounded-lg border p-4 shadow-sm bg-muted">
-//                 <h2 className="text-sm font-medium text-muted-foreground">Your Put Value</h2>
-//                 <p className="text-2xl font-bold">{userEntry.putValue}</p>
-//               </div>
-//             </div>
-//           ) : (
-//             isConnected && !isLoading && isWhitelisted && (
-//               <div className="border p-6 rounded-lg space-y-4 shadow-md text-center">
-//                 <h2 className="text-lg font-semibold text-muted-foreground">You haven't set your options yet.</h2>
-//                 <p className="text-sm text-muted-foreground">Click the button below to get started!</p>
-//                 <Button onClick={openModalForEdit} className="bg-orange-500 text-white">
-//                   Enter Your Options
-//                 </Button>
-//               </div>
-//             )
-//           )}
-
-//           {userEntry && isWhitelisted && (
-//             <Button onClick={openModalForEdit} className="bg-orange-500 text-white">
-//               Update Your Options
-//             </Button>
-//           )}
-//         </>
-//       )}
-
-//       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-//         <DialogContent className="sm:max-w-[425px]">
-//           <DialogHeader>
-//             <DialogTitle>{userEntry ? 'Update Your Options' : 'Enter Your Options'}</DialogTitle>
-//           </DialogHeader>
-//           <div className="grid gap-4 py-4">
-//             <div className="grid grid-cols-4 items-center gap-4">
-//               <Label htmlFor="call" className="text-right">
-//                 Call Value
-//               </Label>
-//               <Input
-//                 id="call"
-//                 type="number"
-//                 value={callValue}
-//                 onChange={(e) => setCallValue(e.target.value)}
-//                 className="col-span-3"
-//               />
-//             </div>
-//             <div className="grid grid-cols-4 items-center gap-4">
-//               <Label htmlFor="put" className="text-right">
-//                 Put Value
-//               </Label>
-//               <Input
-//                 id="put"
-//                 type="number"
-//                 value={putValue}
-//                 onChange={(e) => setPutValue(e.target.value)}
-//                 className="col-span-3"
-//               />
-//             </div>
-//           </div>
-//           <DialogFooter>
-//             <Button variant="outline" onClick={() => setIsModalOpen(false)} disabled={isLoading}>
-//               Cancel
-//             </Button>
-//             <Button onClick={handleSubmit} className="bg-orange-500 text-white" disabled={isLoading}>
-//               {isLoading ? 'Saving...' : 'Save'}
-//             </Button>
-//           </DialogFooter>
-//         </DialogContent>
-//       </Dialog>
-
-//       <UserOptionsTable
-//         optionsDataList={allUserOptions}
-//         isLoading={isLoading && allUserOptions.length > 0}
-//         connectedAddress={connectedAddress}
-//       />
-//     </div>
-//   );
-// }
-
-// Path: (e.g. app/requests/[requestId]/options/page.tsx)
 'use client';
 
 import * as React from 'react';
@@ -338,14 +9,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 import { UserOptionsTable } from '@/components/tables/UserOptionsTable';
 import { useUniSat } from '@/contexts/UniSatContext';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog';
-import { BtcPriceCard } from '@/components/BtcPriceCard'; // Import the self-contained price card
+import { BtcPriceCard } from '@/components/BtcPriceCard';
 
 // Interfaces for user options data
 interface UserOption {
@@ -366,20 +30,16 @@ export default function OptionsPage() {
   const { toast } = useToast();
   const { unisatAddress } = useUniSat();
 
-  // State for user-specific data
   const [allUserOptions, setAllUserOptions] = React.useState<UserOption[]>([]);
   const [userEntry, setUserEntry] = React.useState<UserOption | null>(null);
   const [isWhitelisted, setIsWhitelisted] = React.useState(false);
   const [callValue, setCallValue] = React.useState('');
   const [putValue, setPutValue] = React.useState('');
-  const [isModalOpen, setIsModalOpen] = React.useState(false);
   const [isLoading, setIsLoading] = React.useState(false);
   const [btcPrice, setBtcPrice] = React.useState(0.00);
 
   const connectedAddress = evmAddress || unisatAddress;
   const isConnected = Boolean(connectedAddress);
-
-  // --- OPTIMIZED EFFECTS ---
 
   // Effect to fetch ALL user options. Runs only ONCE on mount.
   React.useEffect(() => {
@@ -407,9 +67,9 @@ export default function OptionsPage() {
       }
     };
     fetchAllOptions();
-  }, []); // Empty array ensures this runs only once.
+  }, []);
 
-  // Memoized function to check whitelist status. Prevents re-creation on every render.
+  // Memoized function to check whitelist status.
   const checkWhitelisted = React.useCallback(async () => {
     if (!connectedAddress) {
       setIsWhitelisted(false);
@@ -427,15 +87,16 @@ export default function OptionsPage() {
       console.error('Error fetching whitelisted users:', error);
       setIsWhitelisted(false);
     }
-  }, [connectedAddress]); // Re-runs ONLY when connectedAddress changes.
+  }, [connectedAddress]);
 
-  // Main effect to orchestrate user data. No longer causes infinite loops.
+  // Main effect to orchestrate user data and update inputs
   React.useEffect(() => {
-    checkWhitelisted(); // Call the stable function
-    if (connectedAddress && allUserOptions.length > 0) {
+    checkWhitelisted();
+    if (connectedAddress) {
       const lower = connectedAddress.toLowerCase();
       const match = allUserOptions.find((entry) => entry.userAddress === lower);
       setUserEntry(match || null);
+      // Pre-fill inputs with existing values or clear if no match
       if (match) {
         setCallValue(match.callValue.toString());
         setPutValue(match.putValue.toString());
@@ -443,26 +104,56 @@ export default function OptionsPage() {
         setCallValue('');
         setPutValue('');
       }
-    } else if (!connectedAddress) {
+    } else {
+      // Clear inputs and user entry if no wallet connected
       setUserEntry(null);
       setCallValue('');
       setPutValue('');
-      setIsModalOpen(false);
     }
-  }, [connectedAddress, allUserOptions, checkWhitelisted]);
+  }, [connectedAddress, allUserOptions, checkWhitelisted, isConnected]);
 
   // --- HANDLER FUNCTIONS ---
 
   const handleSubmit = async () => {
-    if (!connectedAddress) return;
+    if (!connectedAddress) {
+      toast({ title: 'Wallet not connected', description: 'Please connect your wallet to submit options.', variant: 'destructive' });
+      return;
+    }
+
+    const parsedCallValue = parseFloat(callValue);
+    const parsedPutValue = parseFloat(putValue);
+
+    if (isNaN(parsedCallValue) || isNaN(parsedPutValue) || parsedCallValue < 0 || parsedPutValue < 0) {
+      toast({ title: 'Invalid Input', description: 'Please enter valid positive numbers for Call and Put values.', variant: 'destructive' });
+      return;
+    }
+
+    // BTC Price Range Validation for Put Value
+    if (btcPrice > 0) {
+      const minPutValue = btcPrice * 0.6; // 40% less
+      const maxPutValue = btcPrice * 1.4; // 40% more
+
+      if (parsedPutValue < minPutValue || parsedPutValue > maxPutValue) {
+        toast({
+          title: 'Put Value Out of Range',
+          description: `Put value must be between ${minPutValue.toFixed(2)} and ${maxPutValue.toFixed(2)} (40% less to 40% more than current BTC price).`,
+          variant: 'destructive',
+        });
+        return;
+      }
+    } else {
+      toast({ title: 'BTC Price Not Available', description: 'Cannot validate put value, BTC price not loaded. Please try again.', variant: 'destructive' });
+      return;
+    }
+
     setIsLoading(true);
 
-    const messageToSign = `Authorize update of options:\nCall: ${callValue}, Put: ${putValue}`;
+    const messageToSign = `Authorize update of options:\nCall: ${parsedCallValue}, Put: ${parsedPutValue}`;
     const payload: UserOptionPayload = {
       userAddress: connectedAddress,
-      callValue: parseFloat(callValue) || 0,
-      putValue: parseFloat(putValue) || 0,
-      btcPrice:btcPrice,
+      callValue: parsedCallValue,
+      putValue: parsedPutValue,
+      btcPrice: btcPrice,
       signedMessageContent: messageToSign,
     };
 
@@ -489,8 +180,8 @@ export default function OptionsPage() {
       }
 
       toast({ title: 'Saved successfully!', description: 'Your options have been updated.' });
-      setIsModalOpen(false);
 
+      // Update allUserOptions and userEntry locally to reflect changes immediately
       setAllUserOptions((prevOptions) => {
         const newEntry = {
           userAddress: connectedAddress.toLowerCase(),
@@ -507,6 +198,8 @@ export default function OptionsPage() {
         }
         return updatedOptions;
       });
+      setUserEntry(payload); // Ensure userEntry state is updated to reflect the new values
+
     } catch (err: any) {
       console.error('Submit error:', err);
       toast({ title: 'Action Failed', description: err.message, variant: 'destructive' });
@@ -515,15 +208,125 @@ export default function OptionsPage() {
     }
   };
 
-  const openModalForEdit = () => {
-    if (userEntry) {
-      setCallValue(userEntry.callValue.toString());
-      setPutValue(userEntry.putValue.toString());
-    } else {
-      setCallValue('');
-      setPutValue('');
-    }
-    setIsModalOpen(true);
+  // Calculate price suggestions based on current BTC price
+  const calculatePriceSuggestions = (basePrice: number) => {
+    if (basePrice <= 0) return { call: [], put: [] };
+
+    const percentages = [0.05, 0.10, 0.20, 0.30, 0.40]; // 5%, 10%, 20%, 30%, 40% options
+
+    // Call suggestions (negative percentages - i.e., strike price below current BTC price)
+    const callSuggestions = percentages.map(p => ({
+      percentage: p,
+      value: basePrice * (1 - p),
+      label: `-${(p * 100).toFixed(0)}% (${(basePrice * (1 - p)).toFixed(2)})`
+    })).sort((a, b) => b.percentage - a.percentage); // Sort descending percentage for call
+
+    // Put suggestions (positive percentages - i.e., strike price above current BTC price)
+    const putSuggestions = percentages.map(p => ({
+      percentage: p,
+      value: basePrice * (1 + p),
+      label: `+${(p * 100).toFixed(0)}% (${(basePrice * (1 + p)).toFixed(2)})`
+    })).sort((a, b) => a.percentage - b.percentage); // Sort ascending percentage for put
+
+    return { call: callSuggestions, put: putSuggestions };
+  };
+
+  // Memoize price suggestions to prevent unnecessary recalculations
+  const priceSuggestions = React.useMemo(() => calculatePriceSuggestions(btcPrice), [btcPrice]);
+
+  // Renders the input fields and suggestion buttons
+  const renderOptionInputs = () => {
+    // Define the range for the Call value note (e.g., 10% below to 50% below current BTC price)
+    const minCallValueNote = btcPrice * 0.5; // 50% less
+    const maxCallValueNote = btcPrice * 0.9; // 10% less
+
+    return (
+      <div className="border p-6 rounded-lg space-y-6 shadow-md bg-card text-card-foreground">
+        <h2 className="text-xl font-semibold">{userEntry ? 'Update Your Options' : 'Enter Your Options'}</h2>
+        <div className="grid gap-6">
+          {/* Call Value Input */}
+          <div className="space-y-2">
+            <Label htmlFor="call">Call Value</Label>
+            <Input
+              id="call"
+              type="number"
+              value={callValue}
+              onChange={(e) => setCallValue(e.target.value)}
+              placeholder="Enter your call value"
+              className="w-full"
+              disabled={isLoading || !isConnected || !isWhitelisted}
+            />
+            {btcPrice > 0 && (
+              <>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {priceSuggestions.call.map((s) => (
+                    <Button
+                      key={`call-${s.percentage}`}
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCallValue(s.value.toFixed(2))}
+                      className="hover:bg-blue-100 hover:text-blue-800 border-blue-300 text-blue-700"
+                      disabled={isLoading}
+                    >
+                      {s.label}
+                    </Button>
+                  ))}
+                </div>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Call value must be between{' '}
+                  <span className="font-semibold text-blue-600">{minCallValueNote.toFixed(2)}</span> (-50%) and{' '}
+                  <span className="font-semibold text-blue-600">{maxCallValueNote.toFixed(2)}</span> (-10%).
+                </p>
+              </>
+            )}
+          </div>
+
+          {/* Put Value Input */}
+          <div className="space-y-2">
+            <Label htmlFor="put">Put Value</Label>
+            <Input
+              id="put"
+              type="number"
+              value={putValue}
+              onChange={(e) => setPutValue(e.target.value)}
+              placeholder="Enter your put value"
+              className="w-full"
+              disabled={isLoading || !isConnected || !isWhitelisted}
+            />
+            {btcPrice > 0 && (
+              <>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {priceSuggestions.put.map((s) => (
+                    <Button
+                      key={`put-${s.percentage}`}
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setPutValue(s.value.toFixed(2))}
+                      className="hover:bg-green-100 hover:text-green-800 border-green-300 text-green-700"
+                      disabled={isLoading}
+                    >
+                      {s.label}
+                    </Button>
+                  ))}
+                </div>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Put value must be between{' '}
+                  <span className="font-semibold text-blue-600">{(btcPrice * 0.6).toFixed(2)}</span> (-40%) and{' '}
+                  <span className="font-semibold text-blue-600">{(btcPrice * 1.4).toFixed(2)}</span> (+40%).
+                </p>
+              </>
+            )}
+          </div>
+        </div>
+        <Button
+          onClick={handleSubmit}
+          className="w-full bg-orange-500 text-white hover:bg-orange-600"
+          disabled={isLoading || !isConnected || !isWhitelisted || btcPrice === 0}
+        >
+          {isLoading ? 'Saving...' : 'Save Your Options'}
+        </Button>
+      </div>
+    );
   };
 
   return (
@@ -531,65 +334,47 @@ export default function OptionsPage() {
       <h1 className="text-3xl font-bold">Options</h1>
       <Separator />
 
-      {/* Render the self-contained component. Its updates won't affect this page. */}
-      <BtcPriceCard setBtcPrice={setBtcPrice} />
+      {/* New wrapper div to limit content width and center it */}
+      <div className="max-w-4xl mx-auto space-y-8"> {/* Adjusted max-width to 4xl for approx 75% on larger screens */}
+        <BtcPriceCard setBtcPrice={setBtcPrice} />
 
-      {/* User's existing options display */}
-      {isLoading && allUserOptions.length === 0 ? (
-        <div className="text-center py-10"><p>Loading your options data...</p></div>
-      ) : (
-        <>
-          {userEntry && isWhitelisted ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="rounded-lg border p-4 shadow-sm bg-muted">
-                <h2 className="text-sm font-medium text-muted-foreground">Your Call Value</h2>
-                <p className="text-2xl font-bold">{userEntry.callValue}</p>
+        {/* Conditional rendering for loading state and inputs */}
+        {isLoading && allUserOptions.length === 0 && !userEntry ? (
+          <div className="text-center py-10"><p>Loading your options data...</p></div>
+        ) : (
+          <>
+            {isConnected && isWhitelisted ? (
+              <>
+                {userEntry && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                    <div className="rounded-lg border p-4 shadow-sm bg-muted">
+                      <h2 className="text-sm font-medium text-muted-foreground">Your Call Value</h2>
+                      <p className="text-2xl font-bold">{userEntry.callValue}</p>
+                    </div>
+                    <div className="rounded-lg border p-4 shadow-sm bg-muted">
+                      <h2 className="text-sm font-medium text-muted-foreground">Your Put Value</h2>
+                      <p className="text-2xl font-bold">{userEntry.putValue}</p>
+                    </div>
+                  </div>
+                )}
+                {renderOptionInputs()}
+              </>
+            ) : (
+              <div className="border p-6 rounded-lg space-y-4 shadow-md text-center">
+                <h2 className="text-lg font-semibold text-muted-foreground">
+                  {!isConnected ? 'Please connect your wallet to view and set options.' : 'You are not whitelisted to set options.'}
+                </h2>
               </div>
-              <div className="rounded-lg border p-4 shadow-sm bg-muted">
-                <h2 className="text-sm font-medium text-muted-foreground">Your Put Value</h2>
-                <p className="text-2xl font-bold">{userEntry.putValue}</p>
-              </div>
-            </div>
-          ) : isConnected && !isLoading && isWhitelisted && (
-            <div className="border p-6 rounded-lg space-y-4 shadow-md text-center">
-              <h2 className="text-lg font-semibold text-muted-foreground">You haven't set your options yet.</h2>
-              <p className="text-sm text-muted-foreground">Click the button below to get started!</p>
-              <Button onClick={openModalForEdit} className="bg-orange-500 text-white">Enter Your Options</Button>
-            </div>
-          )}
-          {userEntry && isWhitelisted && (
-            <Button onClick={openModalForEdit} className="bg-orange-500 text-white">Update Your Options</Button>
-          )}
-        </>
-      )}
+            )}
+          </>
+        )}
 
-      {/* Dialog for entering/updating options */}
-      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader><DialogTitle>{userEntry ? 'Update Your Options' : 'Enter Your Options'}</DialogTitle></DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="call" className="text-right">Call Value</Label>
-              <Input id="call" type="number" value={callValue} onChange={(e) => setCallValue(e.target.value)} className="col-span-3"/>
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="put" className="text-right">Put Value</Label>
-              <Input id="put" type="number" value={putValue} onChange={(e) => setPutValue(e.target.value)} className="col-span-3"/>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsModalOpen(false)} disabled={isLoading}>Cancel</Button>
-            <Button onClick={handleSubmit} className="bg-orange-500 text-white" disabled={isLoading}>{isLoading ? 'Saving...' : 'Save'}</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* The memoized table of other users' options */}
-      <UserOptionsTable
-        optionsDataList={allUserOptions}
-        isLoading={isLoading && allUserOptions.length > 0}
-        connectedAddress={connectedAddress}
-      />
+        <UserOptionsTable
+          optionsDataList={allUserOptions}
+          isLoading={isLoading && allUserOptions.length > 0}
+          connectedAddress={connectedAddress}
+        />
+      </div> {/* End of max-width wrapper */}
     </div>
   );
 }
